@@ -42,7 +42,7 @@ function Get-BitLockerStatus {
 # Enable BitLocker function
 function Enable-BitLockerEncryption {
     try {
-        Enable-BitLocker -MountPoint $global:systemDrive -EncryptionMethod XtsAes256 -UsedSpaceOnly -SkipHardwareTest
+        Enable-BitLocker -MountPoint $global:systemDrive -UsedSpaceOnly -SkipHardwareTest
         Write-Log "BitLocker encryption enabled successfully"
         [System.Windows.Forms.MessageBox]::Show("BitLocker encryption has been enabled.", "Success", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
     } catch {
