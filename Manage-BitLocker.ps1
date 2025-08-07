@@ -96,16 +96,9 @@ function Enable-BitLockerEncryption {
         } else {
             if (Check-And-Eject-CDROMs) {
                 try {
-                    $tpmProtector = $bitlockerVolume.KeyProtector | Where-Object { $_.KeyProtectorType -eq 'Tpm' }
-                    if ($tpmProtector) {
-                        Write-Log "TPM protector found. Resuming BitLocker encryption."
-                        Resume-BitLocker -MountPoint $global:systemDrive
-                    } else {
-                        Write-Log "No TPM protector found. Enabling BitLocker with new encryption."
-                        Enable-BitLocker -MountPoint $global:systemDrive -EncryptionMethod XtsAes256 -UsedSpaceOnly
-                    }
-                    Write-Log "BitLocker encryption process initiated successfully"
-                    [System.Windows.Forms.MessageBox]::Show("BitLocker encryption process has been initiated.", "Success", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+                    Enable-BitLocker -MountPoint $global:systemDrive -EncryptionMethod XtsAes256 -UsedSpaceOnly
+                    Write-Log "BitLocker encryption enabled successfully"
+                    [System.Windows.Forms.MessageBox]::Show("BitLocker encryption has been enabled.", "Success", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
                 } catch {
                     if ($_.Exception.Message -like "*Restart the computer to run a hardware test*") {
                         Write-Log "BitLocker requires a system restart to run hardware tests"
@@ -120,8 +113,8 @@ function Enable-BitLockerEncryption {
             }
         }
     } catch {
-        Write-Log "Error with BitLocker encryption process: $_"
-        [System.Windows.Forms.MessageBox]::Show("Failed to process BitLocker encryption. Please check the log for details.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+        Write-Log "Error enabling BitLocker: $_"
+        [System.Windows.Forms.MessageBox]::Show("Failed to enable BitLocker encryption. Please check the log for details.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
     }
 }
 
