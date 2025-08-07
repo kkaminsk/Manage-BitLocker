@@ -65,6 +65,27 @@ function Check-And-Eject-CDROMs {
     return $true
 }
 
+# Function to handle system reboot
+function Restart-SystemForBitLocker {
+    $result = [System.Windows.Forms.MessageBox]::Show(
+        "A system restart is required to complete the BitLocker setup. Would you like to restart now?",
+        "Restart Required",
+        [System.Windows.Forms.MessageBoxButtons]::YesNo,
+        [System.Windows.Forms.MessageBoxIcon]::Question)
+
+    if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
+        Write-Log "User initiated system restart for BitLocker setup"
+        Restart-Computer -Force
+    } else {
+        Write-Log "User postponed system restart for BitLocker setup"
+        [System.Windows.Forms.MessageBox]::Show(
+            "Please remember to restart your computer to complete the BitLocker setup.",
+            "Restart Postponed",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Information)
+    }
+}
+
 # Enable BitLocker function
 function Enable-BitLockerEncryption {
     try {
@@ -74,9 +95,18 @@ function Enable-BitLockerEncryption {
             [System.Windows.Forms.MessageBox]::Show("BitLocker decryption is currently in progress. Please wait for the decryption to finish before enabling BitLocker.", "Decryption in Progress", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
         } else {
             if (Check-And-Eject-CDROMs) {
-                Enable-BitLocker -MountPoint $global:systemDrive -EncryptionMethod XtsAes256 -UsedSpaceOnly -SkipHardwareTest
-                Write-Log "BitLocker encryption enabled successfully"
-                [System.Windows.Forms.MessageBox]::Show("BitLocker encryption has been enabled.", "Success", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+                try {
+                    Enable-BitLocker -MountPoint $global:systemDrive -EncryptionMethod XtsAes256 -UsedSpaceOnly
+                    Write-Log "BitLocker encryption enabled successfully"
+                    [System.Windows.Forms.MessageBox]::Show("BitLocker encryption has been enabled.", "Success", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+                } catch {
+                    if ($_.Exception.Message -like "*Restart the computer to run a hardware test*") {
+                        Write-Log "BitLocker requires a system restart to run hardware tests"
+                        Restart-SystemForBitLocker
+                    } else {
+                        throw
+                    }
+                }
             } else {
                 Write-Log "BitLocker encryption cancelled due to media in CD/DVD drives"
                 [System.Windows.Forms.MessageBox]::Show("BitLocker encryption has been cancelled. Please eject all CD/DVD media and try again.", "Cancelled", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
