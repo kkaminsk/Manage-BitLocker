@@ -131,10 +131,16 @@ $form.Controls.Add($exitButton)
 
 # Function to update status
 function UpdateStatus {
-    $status = Get-BitLockerStatus
-    $statusLabel.Text = "BitLocker Status: $status"
+    $bitlockerVolume = Get-BitLockerVolume -MountPoint $global:systemDrive | Where-Object { $_.VolumeType -eq 'OperatingSystem' }
+    if ($bitlockerVolume) {
+        $status = $bitlockerVolume.VolumeStatus
+        $encryptionPercentage = $bitlockerVolume.EncryptionPercentage
+        $statusLabel.Text = "BitLocker Status: $status (Encryption: $encryptionPercentage%)"
+    } else {
+        $statusLabel.Text = "BitLocker Status: Not Found"
+    }
     $lastCheckedLabel.Text = "Last Checked: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-    Write-Log "BitLocker status checked: $status"
+    Write-Log "BitLocker status checked: $($statusLabel.Text)"
 }
 
 # Initial status update
