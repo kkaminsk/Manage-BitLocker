@@ -42,9 +42,15 @@ function Get-BitLockerStatus {
 # Enable BitLocker function
 function Enable-BitLockerEncryption {
     try {
-        Enable-BitLocker -MountPoint $global:systemDrive -UsedSpaceOnly -SkipHardwareTest
-        Write-Log "BitLocker encryption enabled successfully"
-        [System.Windows.Forms.MessageBox]::Show("BitLocker encryption has been enabled.", "Success", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+        $bitlockerVolume = Get-BitLockerVolume -MountPoint $global:systemDrive
+        if ($bitlockerVolume.VolumeStatus -eq "DecryptionInProgress") {
+            Write-Log "BitLocker decryption in progress. Cannot enable encryption at this time."
+            [System.Windows.Forms.MessageBox]::Show("BitLocker decryption is currently in progress. Please wait for the decryption to finish before enabling BitLocker.", "Decryption in Progress", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
+        } else {
+            Enable-BitLocker -MountPoint $global:systemDrive -EncryptionMethod XtsAes256 -UsedSpaceOnly -SkipHardwareTest
+            Write-Log "BitLocker encryption enabled successfully"
+            [System.Windows.Forms.MessageBox]::Show("BitLocker encryption has been enabled.", "Success", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+        }
     } catch {
         Write-Log "Error enabling BitLocker: $_"
         [System.Windows.Forms.MessageBox]::Show("Failed to enable BitLocker encryption. Please check the log for details.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
