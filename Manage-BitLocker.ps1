@@ -27,15 +27,15 @@ function Write-Log {
 # BitLocker status check function
 function Get-BitLockerStatus {
     try {
-        $bitlockerVolume = Get-BitLockerVolume -MountPoint $global:systemDrive
-        if ($bitlockerVolume.VolumeStatus -eq "FullyEncrypted") {
-            return "Enabled"
+        $bitlockerVolume = Get-BitLockerVolume -MountPoint $global:systemDrive | Where-Object { $_.VolumeType -eq 'OperatingSystem' }
+        if ($bitlockerVolume) {
+            return $bitlockerVolume.VolumeStatus
         } else {
-            return "Disabled"
+            return "Not Found"
         }
     } catch {
         Write-Log "Error checking BitLocker status: $_"
-        return "Unknown"
+        return "Error"
     }
 }
 
