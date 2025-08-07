@@ -47,7 +47,7 @@ function Enable-BitLockerEncryption {
             Write-Log "BitLocker decryption in progress. Cannot enable encryption at this time."
             [System.Windows.Forms.MessageBox]::Show("BitLocker decryption is currently in progress. Please wait for the decryption to finish before enabling BitLocker.", "Decryption in Progress", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
         } else {
-            Enable-BitLocker -MountPoint $global:systemDrive -EncryptionMethod XtsAes256 -UsedSpaceOnly -SkipHardwareTest
+            Enable-BitLocker -MountPoint $global:systemDrive -TpmProtector -UsedSpaceOnly
             Write-Log "BitLocker encryption enabled successfully"
             [System.Windows.Forms.MessageBox]::Show("BitLocker encryption has been enabled.", "Success", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
         }
