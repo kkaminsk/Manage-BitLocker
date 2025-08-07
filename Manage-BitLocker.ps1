@@ -39,6 +39,32 @@ function Get-BitLockerStatus {
     }
 }
 
+# Function to check for and eject CD-ROM media
+function Check-And-Eject-CDROMs {
+    $cdRomDrives = Get-WmiObject Win32_CDROMDrive | Where-Object { $_.MediaLoaded -eq $true }
+    if ($cdRomDrives) {
+        $message = "The following CD/DVD drives have media loaded:`n`n"
+        $cdRomDrives | ForEach-Object { $message += "$($_.Drive) - $($_.VolumeName)`n" }
+        $message += "`nClick OK to eject all media. This is required before enabling BitLocker."
+        $result = [System.Windows.Forms.MessageBox]::Show($message, "Media Detected", [System.Windows.Forms.MessageBoxButtons]::OKCancel, [System.Windows.Forms.MessageBoxIcon]::Warning)
+        if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+            $cdRomDrives | ForEach-Object { 
+                try {
+                    $drive = New-Object -ComObject Shell.Application
+                    $drive.Namespace(17).ParseName($_.Drive).InvokeVerb("Eject")
+                    Write-Log "Ejected media from drive $($_.Drive)"
+                } catch {
+                    Write-Log "Failed to eject media from drive $($_.Drive): $_"
+                }
+            }
+            return $true
+        } else {
+            return $false
+        }
+    }
+    return $true
+}
+
 # Enable BitLocker function
 function Enable-BitLockerEncryption {
     try {
@@ -47,9 +73,14 @@ function Enable-BitLockerEncryption {
             Write-Log "BitLocker decryption in progress. Cannot enable encryption at this time."
             [System.Windows.Forms.MessageBox]::Show("BitLocker decryption is currently in progress. Please wait for the decryption to finish before enabling BitLocker.", "Decryption in Progress", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
         } else {
-            Enable-BitLocker -MountPoint $global:systemDrive -TpmProtector -UsedSpaceOnly
-            Write-Log "BitLocker encryption enabled successfully"
-            [System.Windows.Forms.MessageBox]::Show("BitLocker encryption has been enabled.", "Success", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+            if (Check-And-Eject-CDROMs) {
+                Enable-BitLocker -MountPoint $global:systemDrive -EncryptionMethod XtsAes256 -UsedSpaceOnly -SkipHardwareTest
+                Write-Log "BitLocker encryption enabled successfully"
+                [System.Windows.Forms.MessageBox]::Show("BitLocker encryption has been enabled.", "Success", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+            } else {
+                Write-Log "BitLocker encryption cancelled due to media in CD/DVD drives"
+                [System.Windows.Forms.MessageBox]::Show("BitLocker encryption has been cancelled. Please eject all CD/DVD media and try again.", "Cancelled", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+            }
         }
     } catch {
         Write-Log "Error enabling BitLocker: $_"
