@@ -86,6 +86,26 @@ function Restart-SystemForBitLocker {
     }
 }
 
+# Function to check and remove TPM protector
+function Remove-TPMProtector {
+    try {
+        $tpmProtector = Get-BitLockerVolume -MountPoint $global:systemDrive | 
+                        Select-Object -ExpandProperty KeyProtector | 
+                        Where-Object { $_.KeyProtectorType -eq 'Tpm' }
+        if ($tpmProtector) {
+            Remove-BitLockerKeyProtector -MountPoint $global:systemDrive -KeyProtectorId $tpmProtector.KeyProtectorId
+            Write-Log "TPM protector removed successfully"
+            return $true
+        } else {
+            Write-Log "No TPM protector found"
+            return $false
+        }
+    } catch {
+        Write-Log "Error removing TPM protector: $_"
+        return $false
+    }
+}
+
 # Enable BitLocker function
 function Enable-BitLockerEncryption {
     try {
@@ -95,6 +115,8 @@ function Enable-BitLockerEncryption {
             [System.Windows.Forms.MessageBox]::Show("BitLocker decryption is currently in progress. Please wait for the decryption to finish before enabling BitLocker.", "Decryption in Progress", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
         } else {
             if (Check-And-Eject-CDROMs) {
+                # Check and remove TPM protector
+                Remove-TPMProtector
                 try {
                     Enable-BitLocker -MountPoint $global:systemDrive -EncryptionMethod XtsAes256 -UsedSpaceOnly
                     Write-Log "BitLocker encryption enabled successfully"
